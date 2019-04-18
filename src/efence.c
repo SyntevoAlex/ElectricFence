@@ -195,29 +195,22 @@ static size_t		bytesPerPage = 0;
  * mutex to enable multithreaded operation
  */
 static pthread_mutex_t mutex ;
-static pid_t mutexpid=0;
-static int locknr=0;
-
 
 static void lock() {
-    if (pthread_mutex_trylock(&mutex)) {
-       if (mutexpid==getpid()) {
-           locknr++;
-           return;
-       } else {
-           pthread_mutex_lock(&mutex);
-       }
-    } 
-    mutexpid=getpid();
-    locknr=1;
+    pthread_mutex_lock(&mutex);
 }
 
 static void unlock() {
-    locknr--;
-    if (!locknr) {
-       mutexpid=0;
-       pthread_mutex_unlock(&mutex);
-    }
+    pthread_mutex_unlock(&mutex);
+}
+
+static void initializeMutex() {
+    pthread_mutexattr_t mutexAttr;
+
+    pthread_mutexattr_init(&mutexAttr);
+    pthread_mutexattr_settype(&mutexAttr, PTHREAD_MUTEX_RECURSIVE);
+    pthread_mutex_init(&mutex, &mutexAttr); 
+    pthread_mutexattr_destroy(&mutexAttr);
 }
 
 /*
@@ -241,6 +234,8 @@ initialize(void)
 	size_t	slack;
 	char *	string;
 	Slot *	slot;
+
+       initializeMutex();
 
        if ( EF_DISABLE_BANNER == -1 ) {
                if ( (string = getenv("EF_DISABLE_BANNER")) != 0 )
@@ -460,6 +455,8 @@ memalign(size_t alignment, size_t userSize)
 	if ( userSize == 0 && !EF_ALLOW_MALLOC_0 )
 		EF_Abort("Allocating 0 bytes, probably a bug.");
 
+	lock();
+
 	/*
 	 * If EF_PROTECT_BELOW is set, all addresses returned by malloc()
 	 * and company will be page-aligned.
@@ -639,6 +636,8 @@ memalign(size_t alignment, size_t userSize)
 	 */
 	if ( !internalUse )
 		Page_DenyAccess(allocationList, allocationListSize);
+
+	unlock();
 
 	return address;
 }
@@ -831,31 +830,21 @@ realloc(void * oldBuffer, size_t newSize)
 extern C_LINKAGE void *
 malloc(size_t size)
 {
-        void  *allocation;   
- 
-        if ( allocationList == 0 ) {
-                pthread_mutex_init(&mutex, NULL); 
-                initialize();   /* This sets EF_ALIGNMENT */
-        }       
-        lock();
-        allocation=memalign(EF_ALIGNMENT, size); 
+	/* initialize() is required to load EF_ALIGNMENT */
+	if ( allocationList == 0 )
+		initialize();
 
-        unlock();
-
-	return allocation;
+	return memalign(EF_ALIGNMENT, size); 
 }
 
 extern C_LINKAGE void *
 calloc(size_t nelem, size_t elsize)
 {
 	size_t	size = nelem * elsize;
-        void * allocation;
-        
-        lock();
-       
-        allocation = malloc(size);
-        memset(allocation, 0, size);
-        unlock();
+	void * allocation;
+
+	allocation = malloc(size);
+	memset(allocation, 0, size);
 
 	return allocation;
 }
@@ -867,11 +856,9 @@ calloc(size_t nelem, size_t elsize)
 extern C_LINKAGE void *
 valloc (size_t size)
 {
-        void * allocation;
-       
-        lock();
-        allocation= memalign(bytesPerPage, size);
-        unlock();
-       
-        return allocation;
+	/* initialize() is required to load bytesPerPage */
+	if ( allocationList == 0 )
+		initialize();
+
+	return memalign(bytesPerPage, size);
 }

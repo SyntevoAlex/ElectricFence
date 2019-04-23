@@ -34,13 +34,17 @@ extern int	sys_nerr;
 /*extern char *	sys_errlist[];*/
 #endif
 
-static const char *
-stringErrorReport(void)
+/*
+ * Note: trying to call strerror() here can easily cause infinite
+ * recursion while trying to print error.
+ */
+static int
+lastErrorNumber(void)
 {
 #if ( defined(sgi) )
-	return strerror(oserror());
+	return oserror();
 #else
-	return strerror(errno);
+	return errno;
 #endif
 }
 
@@ -86,7 +90,7 @@ Page_Create(size_t size)
 #endif
 
 	if ( allocation == (caddr_t)-1 )
-		EF_Exit("mmap() failed: %s", stringErrorReport());
+		EF_Exit("mmap() failed: %d", lastErrorNumber);
 
 	return (void *)allocation;
 }
@@ -101,8 +105,8 @@ Page_Create(size_t size)
 		devZeroFd = open("/dev/zero", O_RDWR);
 		if ( devZeroFd < 0 )
 			EF_Exit(
-			 "open() on /dev/zero failed: %s"
-			,stringErrorReport());
+			 "open() on /dev/zero failed: %d"
+			, lastErrorNumber());
 	}
 
 	/*
@@ -126,7 +130,7 @@ Page_Create(size_t size)
 	startAddr = allocation + size;
 
 	if ( allocation == (caddr_t)-1 )
-		EF_Exit("mmap() failed: %s", stringErrorReport());
+		EF_Exit("mmap() failed: %d", lastErrorNumber());
 
 	return (void *)allocation;
 }
@@ -135,7 +139,7 @@ Page_Create(size_t size)
 static void
 mprotectFailed(void)
 {
-	EF_Exit("mprotect() failed: %s", stringErrorReport());
+	EF_Exit("mprotect() failed: %d", lastErrorNumber());
 }
 
 void

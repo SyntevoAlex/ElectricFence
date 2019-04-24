@@ -191,6 +191,13 @@ static int		noAllocationListProtection = 0;
  */
 static size_t		bytesPerPage = 0;
 
+/*
+ * Performance counters for debug purposes
+ */
+static long long	g_Perf_AllocatedBlocks = 0;
+static long long	g_Perf_AllocatedBytesUser = 0;
+static long long	g_Perf_AllocatedBytesReal = 0;
+
  /*
  * mutex to enable multithreaded operation
  */
@@ -629,6 +636,10 @@ memalign(size_t alignment, size_t userSize)
 
 	fullSlot->userAddress = address;
 	fullSlot->userSize = userSize;
+
+	g_Perf_AllocatedBlocks 	  += 1;
+	g_Perf_AllocatedBytesUser += userSize;
+	g_Perf_AllocatedBytesReal += internalSize;
 
 	/*
 	 * Make the pool's internal memory inaccessable, so that the program

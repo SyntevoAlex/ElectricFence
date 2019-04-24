@@ -159,7 +159,22 @@ Page_DenyAccess(void * address, size_t size)
 void
 Page_Delete(void * address, size_t size)
 {
-	Page_DenyAccess(address, size);
+	void* deleted;
+
+	deleted = (caddr_t) mmap(
+		address,
+		size,
+		PROT_NONE,
+		MAP_FIXED|MAP_PRIVATE|MAP_ANONYMOUS,
+		-1,
+		0
+	);
+
+	if (deleted == MAP_FAILED)
+		EF_Exit("mmap(PROT_NONE) failed: %d", lastErrorNumber());
+
+	if (deleted != address)
+		EF_Exit("mmap(PROT_NONE) returned unexpected address");
 }
 
 #if defined(_SC_PAGESIZE)

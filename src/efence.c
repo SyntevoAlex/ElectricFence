@@ -659,13 +659,12 @@ memalign(size_t alignment, size_t userSize)
 static Slot *
 slotForUserAddress(void * address)
 {
-	register Slot *	slot = allocationList;
-	register size_t	count = slotCount;
+	Slot * slotFirst = allocationList;
+	Slot * slotLast  = allocationList + slotCount - 1;
 	
-	for ( ; count > 0; count-- ) {
+	for (Slot * slot = slotLast; slot >= slotFirst; slot-- ) {
 		if ( slot->userAddress == address )
 			return slot;
-		slot++;
 	}
 
 	return 0;
@@ -677,13 +676,12 @@ slotForUserAddress(void * address)
 static Slot *
 slotForInternalAddress(void * address)
 {
-	register Slot *	slot = allocationList;
-	register size_t	count = slotCount;
+	Slot * slotFirst = allocationList;
+	Slot * slotLast  = allocationList + slotCount - 1;
 	
-	for ( ; count > 0; count-- ) {
+	for (Slot * slot = slotLast; slot >= slotFirst; slot-- ) {
 		if ( slot->internalAddress == address )
 			return slot;
-		slot++;
 	}
 	return 0;
 }
@@ -696,14 +694,13 @@ slotForInternalAddress(void * address)
 static Slot *
 slotForInternalAddressPreviousTo(void * address)
 {
-	register Slot *	slot = allocationList;
-	register size_t	count = slotCount;
+	Slot * slotFirst = allocationList;
+	Slot * slotLast  = allocationList + slotCount - 1;
 	
-	for ( ; count > 0; count-- ) {
+	for (Slot * slot = slotLast; slot >= slotFirst; slot-- ) {
 		if ( ((char *)slot->internalAddress)
 		 + slot->internalSize == address )
 			return slot;
-		slot++;
 	}
 	return 0;
 }

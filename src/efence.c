@@ -31,6 +31,7 @@
  */
 #include "efence.h"
 #include <stdlib.h>
+#include <stdio.h>
 #include <unistd.h>
 #include <memory.h>
 #include <string.h>
@@ -397,6 +398,9 @@ memalign(size_t alignment, size_t userSize)
 	fullSlot->userSize    = userSize;
 	fullSlot->magic       = calculateSlotMagic(fullSlot);
 
+	// @@@@
+	memset(fullSlot->userAddress, 0xCC, fullSlot->userSize);
+
 	g_Perf_AllocatedBlocks 	  += 1;
 	g_Perf_AllocatedBytesUser += userSize;
 	g_Perf_AllocatedBytesReal += internalSize;
@@ -406,10 +410,14 @@ memalign(size_t alignment, size_t userSize)
 	return address;
 }
 
+Slot* slotForUserAddressInternal(void * address) {
+	return (Slot*)(((intptr_t)address - sizeof(Slot)) & ~(bytesPerPage - 1));
+}
+
 Slot* slotForUserAddress(void * address) {
 	Slot *	slot;
 
-	slot = (Slot*)(((intptr_t)address - sizeof(Slot)) & ~(bytesPerPage - 1));
+	slot = slotForUserAddressInternal(address);
 
 	if (slot->magic != calculateSlotMagic(slot))
 		EF_Abort("Allocator's internal data was corrupted, or you're calling free() for invalid pointer");
@@ -504,3 +512,23 @@ valloc (size_t size)
 
 	return memalign(bytesPerPage, size);
 }
+
+/*
+ * Debugging code, intended for use in GDB
+ */
+extern C_LINKAGE void *
+EF_AllocInfo (void * address)
+{
+	Slot *	slot;
+	size_t  goodMagic;
+
+	slot = slotForUserAddressInternal(address);
+	goodMagic = calculateSlotMagic(slot);
+
+	printf("UserAddr = %p\n",   slot->userAddress);
+	printf("IntAddr  = %p\n",   slot->internalAddress);
+	printf("UserSize = %zd\n",  slot->userSize);
+	printf("IntSize  = %zd\n",  slot->internalSize);
+	printf("Magic    = %s\n",   (slot->magic == goodMagic) ? "Good" : "Wrong");
+}
+

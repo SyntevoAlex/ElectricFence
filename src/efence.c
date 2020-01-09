@@ -36,6 +36,7 @@
 #include <memory.h>
 #include <string.h>
 #include <pthread.h>
+#include <execinfo.h>
 
 #ifdef	malloc
 #undef	malloc
@@ -62,6 +63,13 @@ static const char	enabled[] = "\n  Memory fencing has been enabled\n\n";
 #define			MEMORY_CREATION_SIZE	1024 * 1024
 
 /*
+ * @@@@
+ */
+int            EF_ENABLE_BACKTRACE = 1;
+#define        BACKTRACE_SIZE 64
+int            g_IsInsideBacktrace = 0;
+
+/*
  * Struct Slot contains all of the information about a malloc buffer except
  * for the contents of its memory.
  */
@@ -71,6 +79,7 @@ struct _Slot {
 	size_t		userSize;
 	size_t		internalSize;
 	size_t 		magic;
+	void*		backtrace[BACKTRACE_SIZE];
 };
 typedef struct _Slot	Slot;
 
@@ -407,6 +416,14 @@ memalign(size_t alignment, size_t userSize)
 
 	unlock();
 
+	// Capture stack outside the lock to avoid deadlocking with libc
+	if (EF_ENABLE_BACKTRACE && !g_IsInsideBacktrace) {
+		// @@@@ Make thread-safe
+		g_IsInsideBacktrace = 1;
+		backtrace(fullSlot->backtrace, BACKTRACE_SIZE);
+		g_IsInsideBacktrace = 0;
+	}
+
 	return address;
 }
 
@@ -530,5 +547,6 @@ EF_AllocInfo (void * address)
 	printf("UserSize = %zd\n",  slot->userSize);
 	printf("IntSize  = %zd\n",  slot->internalSize);
 	printf("Magic    = %s\n",   (slot->magic == goodMagic) ? "Good" : "Wrong");
+	printf("Backtrace= %p\n",   slot->backtrace);
 }
 

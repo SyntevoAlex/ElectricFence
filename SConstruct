@@ -12,9 +12,9 @@ env.Append(CPPPATH = ['#src'])
 env.Append(LIBPATH = ['#src'])
 env.Append(CFLAGS = ['-g'])
 
-print "===================================================="
-print "Compiling Electric Fence for " + env['platform']
-print "===================================================="
+print("====================================================")
+print("Compiling Electric Fence for " + env['platform'])
+print("====================================================")
 
 if env['platform'] == 'hp-ux':
   env.Append(CFLAGS = ['-Aa', '-D_HPUX_SOURCE', '-DPAGE_PROTECTION_VIOLATED_SIGNAL=SIGBUS'])

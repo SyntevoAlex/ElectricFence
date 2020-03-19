@@ -7,6 +7,8 @@
 #include <errno.h>
 #include <string.h>
 
+#define MAX_MAP_COUNT_ADVICE "\nDo you need to increase your 'vm.max_map_count' ?"
+
 /*
  * Lots of systems are missing the definition of PROT_NONE.
  */
@@ -90,7 +92,7 @@ Page_Create(size_t size)
 #endif
 
 	if ( allocation == (caddr_t)-1 )
-		EF_Exit("mmap() failed: %d", lastErrorNumber);
+		EF_Exit("mmap() failed: %d" MAX_MAP_COUNT_ADVICE, lastErrorNumber);
 
 	return (void *)allocation;
 }
@@ -130,7 +132,7 @@ Page_Create(size_t size)
 	startAddr = allocation + size;
 
 	if ( allocation == (caddr_t)-1 )
-		EF_Exit("mmap() failed: %d", lastErrorNumber());
+		EF_Exit("mmap() failed: %d" MAX_MAP_COUNT_ADVICE, lastErrorNumber());
 
 	return (void *)allocation;
 }
@@ -139,7 +141,7 @@ Page_Create(size_t size)
 static void
 mprotectFailed(void)
 {
-	EF_Exit("mprotect() failed: %d", lastErrorNumber());
+	EF_Exit("mprotect() failed: %d" MAX_MAP_COUNT_ADVICE, lastErrorNumber());
 }
 
 void
@@ -171,7 +173,7 @@ Page_Delete(void * address, size_t size)
 	);
 
 	if (deleted == MAP_FAILED)
-		EF_Exit("mmap(PROT_NONE) failed: %d", lastErrorNumber());
+		EF_Exit("mmap(PROT_NONE) failed: %d" MAX_MAP_COUNT_ADVICE, lastErrorNumber());
 
 	if (deleted != address)
 		EF_Exit("mmap(PROT_NONE) returned unexpected address");
